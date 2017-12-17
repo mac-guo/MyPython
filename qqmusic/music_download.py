@@ -7,7 +7,7 @@ import random
 # =======全局设置========
 
 # 音乐文件夹路径名称（下载时会在此路径下根据歌手名创建文件夹）
-music_dir_path = 'C:/Users/Administrator/Desktop/新建文件夹 (2)/音乐/'
+music_dir_path = 'D:/我的音乐/'
 
 # 下载链接qq号（目前不知道有什么用，随便填一个真实QQ号）
 url_qq_number = '349602330'
