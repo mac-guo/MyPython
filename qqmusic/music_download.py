@@ -3,11 +3,12 @@ import os
 import re
 import time
 import random
+import ssl
 
 # =======全局设置========
 
 # 音乐文件夹路径名称（下载时会在此路径下根据歌手名创建文件夹）
-music_dir_path = 'D:/我的音乐/'
+music_dir_path = '/Users/pengguo/音乐/'
 
 # 下载链接qq号（目前不知道有什么用，随便填一个真实QQ号）
 url_qq_number = '349602330'
@@ -23,6 +24,8 @@ download_min_time = 10
 download_max_time = 30
 
 # =======全局设置========
+
+context = ssl._create_unverified_context()
 
 # 进度条
 def Schedule(a,b,c):
@@ -61,7 +64,7 @@ def getSingerListByPageNum(pageNum):
                     '&notice=0' + \
                     '&platform=yqq' + \
                     '&needNewCode=0'
-    response = urllib.request.urlopen(singerListUrl)
+    response = urllib.request.urlopen(singerListUrl, context=context)
     singerListHtmlContent = response.read().decode(encoding="utf-8")
     singerList = []
     singerIdList = re.findall(r'"Fsinger_mid":"(.*?)","Fsinger_name"', singerListHtmlContent)
@@ -89,7 +92,7 @@ def getSongListBySingerId(singerId):
                     '&begin=0' + \
                     '&num=30' + \
                     '&songstatus=1'
-    response = urllib.request.urlopen(songListUrl)
+    response = urllib.request.urlopen(songListUrl, context=context)
     songListHtmlContent = response.read().decode(encoding="utf-8")
     totalSongSize = re.findall(r'"total":(\d+?)},', songListHtmlContent)[0]
 
@@ -115,7 +118,7 @@ def getSongListBySingerId(singerId):
                       '&begin=' + str(i*30) + \
                       '&num=30' + \
                       '&songstatus=1'
-        response = urllib.request.urlopen(songListUrl)
+        response = urllib.request.urlopen(songListUrl, context=context)
         songListHtmlContent = response.read().decode(encoding="utf-8")
         songIdList = re.findall(r'"strMediaMid":"(.+?)","stream"', songListHtmlContent)
         songNameList = re.findall(r'"songname":"(.+?)","songorig"', songListHtmlContent)
