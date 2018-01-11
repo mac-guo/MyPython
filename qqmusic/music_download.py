@@ -4,18 +4,20 @@ import re
 import time
 import random
 import ssl
+import logging
 
 # =======全局设置========
 
 # 音乐文件夹路径名称（下载时会在此路径下根据歌手名创建文件夹）
-music_dir_path = '/Users/pengguo/音乐/'
+music_dir_path = 'Z:/音乐/'
 
 # 下载链接qq号（目前不知道有什么用，随便填一个真实QQ号）
 url_qq_number = '349602330'
 
 # 歌曲名过滤正则表达式
-song_name_filter = r'\(.*Live.*\)|\(.*Demo.*\)|\(.*现场.*\)|\(.*Remix.*\)|\(.*Mix.*\)' \
-                   r'|\(.*DJ.*\)|\(.*伴奏.*\)|\(.*纯音乐.*\)|\(.*Piano.*\)|\(.*钢琴.*\)|\(.*环绕.*\)'
+# song_name_filter = r'\(.*Live.*\)|\(.*Demo.*\)|\(.*现场.*\)|\(.*Remix.*\)|\(.*Mix.*\)' \
+#                   r'|\(.*DJ.*\)|\(.*伴奏.*\)|\(.*纯音乐.*\)|\(.*Piano.*\)|\(.*钢琴.*\)|\(.*环绕.*\)'
+song_name_filter = r'\(.*\)'
 
 # 最小下载等待间隔（秒）
 download_min_time = 10
@@ -24,6 +26,18 @@ download_min_time = 10
 download_max_time = 30
 
 # =======全局设置========
+
+# =======日志设置========
+#LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
+#logging.basicConfig(filename='music_download.log', level=logging.ERROR, format=LOG_FORMAT)
+logname = "music_download.log"
+filehandler = logging.FileHandler(filename=logname,encoding="utf-8")
+fmter = logging.Formatter(fmt="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+filehandler.setFormatter(fmter)
+loger = logging.getLogger(__name__)
+loger.addHandler(filehandler)
+loger.setLevel(logging.ERROR)
+# =======日志设置========
 
 context = ssl._create_unverified_context()
 
@@ -44,6 +58,8 @@ def download(url, filePath, fileName):
     print('休息' + str(randomNum) + '秒')
     print('\n')
     time.sleep(randomNum)
+
+
 
 
 # 根据页码获取歌手列表
@@ -69,8 +85,12 @@ def getSingerListByPageNum(pageNum):
     singerList = []
     singerIdList = re.findall(r'"Fsinger_mid":"(.*?)","Fsinger_name"', singerListHtmlContent)
     singerNameList = re.findall(r'"Fsinger_name":"(.*?)","Fsinger_tag"', singerListHtmlContent)
-    for i in range(len(singerIdList)):
-        singerList.append(singerIdList[i] + '-' + singerNameList[i])
+    try:
+        for i in range(len(singerIdList)):
+            singerList.append(singerIdList[i] + '=+' + singerNameList[i])
+    except BaseException as err:
+        loger.error(u'getSingerListByPageNum error, err=%s, singerListHtmlContent=%s, singerIdList=%s, singerNameList=%s' \
+                      % (err.__str__(), singerListHtmlContent, singerIdList, singerNameList))
     return singerList
 
 
@@ -122,8 +142,12 @@ def getSongListBySingerId(singerId):
         songListHtmlContent = response.read().decode(encoding="utf-8")
         songIdList = re.findall(r'"strMediaMid":"(.+?)","stream"', songListHtmlContent)
         songNameList = re.findall(r'"songname":"(.+?)","songorig"', songListHtmlContent)
-        for j in range(len(songIdList)):
-            songList.append(songIdList[j] + '==' + songNameList[j])
+        try:
+            for j in range(len(songIdList)):
+                songList.append(songIdList[j] + '==' + songNameList[j])
+        except BaseException as err:
+            loger.error(u'getSongListBySingerId error, err=%s, singerId=%s, songListHtmlContent=%s, songIdList=%s, songNameList=%s' \
+                          % (err.__str__(), singerId, songListHtmlContent, songIdList, songNameList))
 
     return songList
 
@@ -132,39 +156,46 @@ def getSongListBySingerId(singerId):
 def startDownloadByPage(pageNum):
     singers = getSingerListByPageNum(pageNum)
     print('有' + str(len(singers)) + '位歌手')
-    for i in range(len(singers)):
-        singerId = singers[i].split('-')[0]
-        singerName = singers[i].split('-')[1]
-        # 创建歌手文件夹
-        singerPath = music_dir_path + singerName
-        if not os.path.exists(singerPath):
-            os.mkdir(singerPath)
 
-        # 循环歌单并下载
-        songs = getSongListBySingerId(singerId)
-        print(singerName + '有' + str(len(songs)) + '首歌')
-        for j in range(len(songs)):
-            songId = songs[j].split('==')[0]
-            songName = songs[j].split('==')[1]
-            # 判断歌曲是否已存在
-            songFilePath = singerPath + '/' + singerName + ' - ' + songName + '.mp3'
+    try:
+        for i in range(len(singers)):
+            singerId = singers[i].split('=+')[0]
+            singerName = singers[i].split('=+')[1]
+            # 创建歌手文件夹
+            singerPath = music_dir_path + singerName
+            if not os.path.exists(singerPath):
+                os.mkdir(singerPath)
 
-            # 若发现过滤的歌曲则删除
-            if re.search(song_name_filter, songName, re.I):
-                if os.path.exists(songFilePath):
-                    os.remove(songFilePath)
-                    continue
+            # 循环歌单并下载
+            songs = getSongListBySingerId(singerId)
+            print(singerName + '有' + str(len(songs)) + '首歌')
 
-            # 只下载文件夹下不存在以及歌单未过滤的歌曲
-            if (not os.path.exists(songFilePath)) and (not re.search(song_name_filter, songName, re.I)):
+            for j in range(len(songs)):
                 try:
-                    downloadPath = 'http://ws.stream.qqmusic.qq.com/C100' + songId + '.m4a?fromtag=38'
-                    download(downloadPath, singerPath, singerName + ' - ' + songName + '.mp3')
-                except Exception as err:
-                    print('下载歌曲出错：singerId=' + singerId + ',singerName=' + singerName + \
-                          ',songId=' + songId + ',songName=' + songName)
-                    print(err)
+                    songId = songs[j].split('==')[0]
+                    songName = songs[j].split('==')[1]
+                    # 判断歌曲是否已存在
+                    songFilePath = singerPath + '/' + singerName + ' - ' + songName + '.mp3'
+
+                    # 若发现过滤的歌曲则删除
+                    if re.search(song_name_filter, songName, re.I):
+                        if os.path.exists(songFilePath):
+                            os.remove(songFilePath)
+                            continue
+
+                    # 只下载文件夹下不存在以及歌单未过滤的歌曲
+                    if (not os.path.exists(songFilePath)) and (not re.search(song_name_filter, songName, re.I)):
+
+                            downloadPath = 'http://ws.stream.qqmusic.qq.com/C100' + songId + '.m4a?fromtag=38'
+                            download(downloadPath, singerPath, singerName + ' - ' + songName + '.mp3')
+                except BaseException as err:
+                    loger.error(u'下载歌曲出错：singerId=' + singerId + ',singerName=' + singerName + \
+                                  ',songId=' + songId + ',songName=' + songName + 'error=' + err.__str__())
+    except BaseException as err:
+        loger.error(u'该歌手异常，singerId=%s，singerName=%s，error=%s' % (singerId, singerName, err.__str__()))
 
 
 # 主方法
-startDownloadByPage(1)
+for i in range(1, 101):
+    print('第%s页歌手'% (i))
+    startDownloadByPage(i)
