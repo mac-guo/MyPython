@@ -193,6 +193,7 @@ def startDownloadByPage(pageNum):
                                   ',songId=' + songId + ',songName=' + songName + 'error=' + err.__str__())
     except BaseException as err:
         loger.error(u'该歌手异常，singerId=%s，singerName=%s，error=%s' % (singerId, singerName, err.__str__()))
+        loger.error(u'singers=%s, songs=%s' % (singers, songs))
 
 
 # 主方法
