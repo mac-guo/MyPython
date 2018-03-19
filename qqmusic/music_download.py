@@ -156,6 +156,7 @@ def getSongListBySingerId(singerId):
 def startDownloadByPage(pageNum):
     singers = getSingerListByPageNum(pageNum)
     print('有' + str(len(singers)) + '位歌手')
+    loger.error('有' + str(len(singers)) + '位歌手')
 
     try:
         for i in range(len(singers)):
@@ -199,4 +200,5 @@ def startDownloadByPage(pageNum):
 # 主方法
 for i in range(1, 101):
     print('第%s页歌手'% (i))
+    loger.error('第%s页歌手'% (i))
     startDownloadByPage(i)
